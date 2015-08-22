@@ -221,7 +221,6 @@ intro.
 assert (value (iszero zero)).
 apply (H (iszero zero)).
 inversion H0.
-rewrite <- H2 in H1. subst.
 inversion H1.
 Qed.
 
