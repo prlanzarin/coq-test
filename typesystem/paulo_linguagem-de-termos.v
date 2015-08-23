@@ -253,12 +253,12 @@ induction t.
   intros. inversion H. subst. inversion H0. reflexivity.
   intros. inversion H. subst. apply IHt2. assumption.
     inversion H0. subst. assumption.
-Admitted.
+Qed.
 
 Theorem preservacao:  forall t t', step t t' -> forall T, hasType t T -> hasType t' T.
 Proof.
 induction t.
   intros. inversion H0. subst. inversion H.
   intros. inversion H0. subst. apply e_succ in H.
-(* proof by magic *)
+(* proof by cansaço *)
 Admitted.

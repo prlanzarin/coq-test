@@ -269,5 +269,6 @@ induction H.
 assert (hasType true tBool).
 simpl.
 induction H0.
+Admitted.
 
 
