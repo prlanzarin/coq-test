@@ -226,10 +226,39 @@ Qed.
 
 Theorem two_e:  forall (t : term), (value t \/ ~value t).
 Proof.
-(* proof by magic *)
+induction t.
+  left. apply numVal. apply zeroNum.
+  induction IHt.
+    induction H.
+      right. unfold not. intros. inversion H. subst. inversion H0. subst. inversion H2.
+      right. unfold not. intros. inversion H. subst. inversion H0. subst. inversion H2.
+      left. apply numVal. apply succNum. assumption.
+      right. intro. apply H. apply numVal. inversion H0. inversion H1. subst. assumption.
+  left. apply trueVal.
+  left. apply falseVal.
+  right. unfold not. intros. inversion H. subst. inversion H0.
+  right. unfold not. intros. inversion H. subst. inversion H0.
+  right. unfold not. intros. inversion H. subst. inversion H0. 
+(* martelado *)
+Qed.
+
+Theorem unicidade: forall (t : term) (T : type) , (hasType t T) -> forall T', (hasType t T') -> T=T'.
+Proof.
+induction t.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. inversion H0. reflexivity.
+  intros. inversion H. subst. apply IHt2. assumption.
+    inversion H0. subst. assumption.
 Admitted.
 
 Theorem preservacao:  forall t t', step t t' -> forall T, hasType t T -> hasType t' T.
 Proof.
+induction t.
+  intros. inversion H0. subst. inversion H.
+  intros. inversion H0. subst. apply e_succ in H.
 (* proof by magic *)
 Admitted.
