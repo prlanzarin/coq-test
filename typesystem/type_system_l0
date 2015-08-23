@@ -247,7 +247,7 @@ assert (value (iszero zero)).
 apply (H (iszero zero)).
 inversion H0.
 inversion H1.
-Admitted.
+Qed.
 
 (* QUESTÃO 2E *)
 Theorem dois_e : forall t : term, (value t) \/ ~(value t).
