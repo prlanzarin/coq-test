@@ -127,9 +127,11 @@ Fixpoint subs (t:term) (x:nat) (e:term) : term :=
   | letx y T t1 t2 => if beq_nat x y
                         then letx y T (subs t x t1) t2
                         else letx y T (subs t x t1) (subs t x t2)
-  | letrec f T1 T2 y t1 t2 => if beq_nat x y
-                                then letrec f T1 T2 y t1 t2
-                                else letrec f T1 T2 y (subs t x t1) (subs t x t2)
+  | letrec f T1 T2 y t1 t2 => if beq_nat x f
+				then letrec f T1 T2 y t1 t2
+				else if beq_nat x y
+			          then letrec f T1 T2 y t1 (subs t x t2)
+				  else letrec f T1 T2 y (subs t x t1) (subs t x t2)
  end.
 
 (* Exemplo de substituição - sem captura de variaveis livres *)
