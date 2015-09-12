@@ -62,6 +62,8 @@ Inductive term :=
  | var    : nat -> term
  | fn     : nat -> type -> term -> term
  | app    : term -> term -> term
+ | _let   : nat -> type -> term -> term -> term
+ | letrec : nat -> type -> type -> nat -> term -> term -> term
 .
 
 (* Exemplo 1: 
@@ -120,7 +122,17 @@ Fixpoint subs (t:term) (x:nat) (e:term) : term :=
   | fn y T body => if beq_nat x y
                      then fn y T body
                      else fn y T (subs t x body)
+  | _let y T e1 e2 => if beq_nat x y
+                        then _let y T (subs t x e1) e2
+                        else _let y T (subs t x e1) (subs t x e2)
+  | letrec f T1 T2 y e1 e2  => if beq_nat f x
+                                  then letrec f T1 T2 y e1 e2
+                                  else if beq_nat x y (* SEI LA QUEM SABE: {e/x} no segundo caso *)
+                                         then letrec f T1 T2 y e1 (subs t x e2)
+                                         else letrec f T1 T2 y (subs t x e1) 
+                                                               (subs t x e2)
  end.
+
 
 (* Exemplo de substituição - sem captura de variaveis livres *)
 (* 
@@ -146,21 +158,28 @@ Eval compute in subs (succ (var 0)) 1
 
 (* Definição da semântica operacional *)
 Inductive step : term -> term -> Prop :=
- | e_iftrue     : forall t2 t3,        step (ifte true  t2 t3) t2
- | e_iffalse    : forall t2 t3,        step (ifte false t2 t3) t3
- | e_if         : forall t1 t2 t3 t1', (step t1 t1') -> step (ifte t1 t2 t3) (ifte t1' t2 t3)
- | e_succ       : forall t t',         step t t' -> step (succ t) (succ t')
- | e_predzero   :                      step (pred zero) zero
- | e_predsucc   : forall t,  (nv t) -> step (pred (succ t)) t
- | e_pred       : forall t t',         step t t' -> step (pred t) (pred t')
- | e_iszerozero :                      step (iszero zero) true
- | e_iszerosucc : forall t,  (nv t) -> step (iszero (succ t)) false
- | e_iszero     : forall t t',         step t t' -> step (iszero t) (iszero t')
- | e_app1       : forall t t' u,       step t t' -> step (app t u) (app t' u)
- | e_app2       : forall t t' v,       step t t' -> value v -> 
-                                                   step (app v t) (app v t')
- | e_beta       : forall t x T e,      value t -> 
-                                           step (app (fn x T e) t) (subs t x e)
+ | e_iftrue     : forall t2 t3,           step (ifte true  t2 t3) t2
+ | e_iffalse    : forall t2 t3,           step (ifte false t2 t3) t3
+ | e_if         : forall t1 t2 t3 t1',    (step t1 t1') -> step (ifte t1 t2 t3) (ifte t1' t2 t3)
+ | e_succ       : forall t t',            step t t' -> step (succ t) (succ t')
+ | e_predzero   :                         step (pred zero) zero
+ | e_predsucc   : forall t,  (nv t) ->    step (pred (succ t)) t
+ | e_pred       : forall t t',            step t t' -> step (pred t) (pred t')
+ | e_iszerozero :                         step (iszero zero) true
+ | e_iszerosucc : forall t,  (nv t) ->    step (iszero (succ t)) false
+ | e_iszero     : forall t t',            step t t' -> step (iszero t) (iszero t')
+ | e_app1       : forall t t' u,          step t t' -> step (app t u) (app t' u)
+ | e_app2       : forall t t' v,          step t t' -> value v -> 
+                                                    step (app v t) (app v t')
+ | e_beta       : forall t x T e,         value t -> 
+                                              step (app (fn x T e) t) (subs t x e)
+ | e_let1       : forall x T v e2,        value v ->
+                                              step (_let x T v e2) (subs v x e2)
+ | e_let2       : forall x T e1 e1' e2,   step e1 e1' -> 
+                                              step (_let x T e1 e2) (_let x T e1' e2)
+(* a sei la vai se fude nao faço ideia se ta certo*)
+ | e_letrec     : forall f T1 T2 y e1 e2, step (letrec f T1 T2 y e1 e2)
+                                               (subs (fn y T1 (letrec f T1 T2 y e1 e1)) f e2) 
 .
 
 
@@ -191,9 +210,9 @@ Qed.
 
 (*****************************************************************)
 
-
-
 (* Ambiente de tipos *)
+
+
 Definition env  := list (nat*type). (* pares do gamma -> pares var ; tipo do contexto *)
 
 
@@ -250,11 +269,28 @@ Eval compute in lookup 0
 Lemma update_after_update : forall Gamma x T U, update x T (update x U Gamma) = update x T Gamma.
 Proof.
 intros.
-Admitted.  (* PREENCHER PROVA *)
+induction Gamma.
+  simpl. rewrite <- beq_nat_refl. reflexivity. subst.
+  induction a. 
+    simpl. 
+    destruct (beq_nat x a) as []_eqn. 
+    simpl. 
+    rewrite <- beq_nat_refl. 
+    reflexivity.
+  simpl. rewrite <- IHGamma. rewrite -> Heqb0. reflexivity. (* wtf *)
+Qed.
 
 Lemma lookup_after_update : forall Gamma x T, lookup x (update x T Gamma) = Some T.
 Proof.
-Admitted. (* PREENCHER PROVA *)
+intros.
+induction Gamma.
+  simpl. rewrite <- beq_nat_refl. reflexivity.
+  simpl.
+  induction a.
+    destruct (beq_nat x a) as []_eqn.
+    simpl. rewrite <- beq_nat_refl. reflexivity.
+    simpl. destruct (beq_nat a x) as []_eqn. rewrite <- IHGamma.
+Admitted. 
 
 
 
@@ -277,6 +313,8 @@ match t with
   | var x         => add x emptySet 
   | fn x T body   => remove x (fv body)
   | app t1 t2     => union (fv t1) (fv t2)
+  | _let x T e1 e2 => union (fv e1) (fv e2)
+  | letrec a b c d e f => emptySet
 end.
 
 
@@ -310,7 +348,13 @@ Inductive hasType : env -> term -> type -> Prop :=
                                             (hasType Gamma (fn x T body) (tfn T T'))     
  | t_app        : forall Gamma f a T T', (hasType Gamma f (tfn T T')) ->
                                          (hasType Gamma a T) ->
-                                         (hasType Gamma (app f a) T')                            
+                                         (hasType Gamma (app f a) T')
+ | t_let        : forall Gamma e1 T x e2 T', (hasType Gamma e1 T) ->
+                                             (hasType (update x T Gamma) e2 T') ->
+                                             (hasType Gamma (_let x T e1 e2) T')
+ | t_letrec     : forall Gamma f T T1 T2 x e1 e2, (hasType (update f (tfn T1 T2) (update x T1 Gamma)) e1 T2) ->
+                                                  (hasType (update f (tfn T1 T2) Gamma) e2 T) ->
+                                                  (hasType Gamma (letrec f T1 T2 x e1 e2) T)
 .
 
 
@@ -318,16 +362,35 @@ Inductive hasType : env -> term -> type -> Prop :=
 (**** Propriedades do sistema de tipos da linguagem ****)
  
 Lemma bool_values : forall t, hasType nil t tbool -> value t -> t=true \/ t=false.
-Proof. 
-induction t.
-  intros.
-  inversion H.
-  
-Admitted. (* PREENCHER PROVA *)
+Proof.
+intro.
+intro. 
+inversion H.
+(*induction t.*)
+ left. reflexivity. (* t *)
+ right. reflexivity. (* f *)
+ intro. left. subst. inversion H6. subst. inversion H3. (* if *)
+ intro. subst. inversion H3. subst. inversion H1. subst. (* iszero *)
+ intro. inversion H1. subst. inversion H2. subst. (* var *)
+ intro. inversion H2. subst. inversion H3. subst. (* app *)
+ intro. inversion H2. subst. inversion H3. subst. (* _let *)
+ intro. inversion H2. subst.  inversion H3. (* letrec *)
+Qed. (* testified, amen *)
  
 Lemma nat_values : forall t, hasType nil t tnat -> value t -> t=zero \/ (exists t', t=succ t').
-Proof. 
-Admitted. (* PREENCHER PROVA *)
+Proof.
+intro.
+intro. 
+inversion H.
+ left. reflexivity. subst. (* zero *)
+ intro. inversion H3. subst. inversion H4. subst. (* if *)
+ intro. inversion H1. subst. inversion H2. subst. right. exists t0. reflexivity. subst. (* succ *)
+ intro. inversion H1. subst. inversion H2. subst. (* pred *)
+ intro. inversion H1. subst. inversion H2. subst. (* var *)
+ intro. inversion H2. subst. inversion H3. subst. (* app *)
+ intro. inversion H2. subst. inversion H3. subst. (* _let *)
+ intro. inversion H2. subst. inversion H3. (* subst. letrec *)
+Qed. (* testified, amen *)
 
 Theorem progresso : forall t T, 
          hasType nil t T -> 
@@ -437,16 +500,32 @@ intros.
 inversion H1.
 apply ex_intro with (x:=ifte x t2 t3).
 apply e_if. assumption.
-
+(* -------------------------------------- *)
 (* t=var n *)
-admit.  (* PREENCHER CASO DA PROVA *)
+intro.
+intro.
+left.
+inversion H. subst. inversion H2. (* apply numVal. subst. *)
 
 (* t=fn x T body *)
-admit.  (* PREENCHER CASO DA PROVA *)
+intro.
+intro. left. apply funVal. (*inversion H. subst. apply funVal.*)
 
 (* t=app t1 t2 *)
-admit.  (* PREENCHER CASO DA PROVA *)
+intro.
+intro. left. inversion H. subst.
+ assert (value t1 \/ (exists t' : term, step t1 t')). apply (IHt1 tfn). 
+
+
+admit.
 
 (* completar com mais casos ao estender a linguagem... *)
+(* t = _let n t1 t2 t3 *)
+admit.
+
+(* t = letrec n t1 t2 n0 t3 t4 *)
+intro.
+intro. inversion H. subst. right. exists t4. rewrite -> (subs (fn n0 t1 (letrec n t1 t2 n0 t4 t4)) n t3). apply e_letrec.
+admit.
 Qed.
 
