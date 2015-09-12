@@ -282,7 +282,7 @@ induction Gamma.
     simpl. 
     rewrite <- beq_nat_refl. 
     reflexivity.
-  simpl. rewrite <- IHGamma. rewrite -> Heqb0. reflexivity. (* wtf *)
+  simpl. rewrite <- IHGamma. rewrite -> Heqb0. reflexivity.
 Qed.
 
 Lemma lookup_after_update : forall Gamma x T, lookup x (update x T Gamma) = Some T.
