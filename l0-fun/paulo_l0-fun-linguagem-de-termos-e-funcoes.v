@@ -289,10 +289,9 @@ induction Gamma.
   induction a.
     destruct (beq_nat x a) as []_eqn.
     simpl. rewrite <- beq_nat_refl. reflexivity.
-    simpl. destruct (beq_nat a x) as []_eqn. rewrite <- IHGamma.
-Admitted. 
-
-
+    simpl. apply beq_nat_false in Heqb0. assert (a <> x). intuition.
+      apply beq_nat_false_iff in H. rewrite -> H. rewrite -> IHGamma. reflexivity.
+Qed. (* NAO PODE SE *) 
 
 
 (****************************************************)
