@@ -171,8 +171,7 @@ Inductive step : term -> term -> Prop :=
  | e_app1       : forall t t' u,          step t t' -> step (app t u) (app t' u)
  | e_app2       : forall t t' v,          step t t' -> value v -> 
                                                     step (app v t) (app v t')
- | e_beta       : forall t x T e,         value t -> 
-                                              step (app (fn x T e) t) (subs t x e)
+ | e_beta       : forall t x T e,         step (app (fn x T e) t) (subs t x e)
  | e_let1       : forall x T v e2,        value v ->
                                               step (_let x T v e2) (subs v x e2)
  | e_let2       : forall x T e1 e1' e2,   step e1 e1' -> 
@@ -512,19 +511,34 @@ intro. left. apply funVal. (*inversion H. subst. apply funVal.*)
 
 (* t=app t1 t2 *)
 intro.
-intro. left. inversion H. subst.
- assert (value t1 \/ (exists t' : term, step t1 t')). apply (IHt1 tfn). 
-
-
-admit.
+intro. right. inversion H. subst.
+ assert (value t1 \/ (exists t' : term, step t1 t')). apply (IHt1 (tfn T0 T)). assumption.
+elim H0.
+intros. 
+inversion H1. subst.
+ inversion H3. subst.
+ inversion H3. subst.
+ inversion H2. subst. inversion H3. subst. inversion H3. subst.
+ apply ex_intro with (x:=(subs t2 x t)). apply e_beta.  subst.
+intros. inversion H1. apply ex_intro with (x:=(app x t2)). apply e_app1. assumption.
 
 (* completar com mais casos ao estender a linguagem... *)
 (* t = _let n t1 t2 t3 *)
-admit.
+intro.
+intro. right. inversion H. subst.
+ assert (value t2 \/ (exists t' : term, step t2 t')). apply (IHt1 t1). assumption.
+elim H0.
+ intros.
+ inversion H1. subst. (*aff*)
+   inversion H6. subst. apply ex_intro with (x:=(subs true n t3)). apply e_let1. assumption. subst.
+   inversion H6. subst. apply ex_intro with (x:=(subs false n t3)). apply e_let1. assumption. subst.
+   inversion H2. subst.  inversion H1. subst.
+admit. admit. admit. admit.
 
 (* t = letrec n t1 t2 n0 t3 t4 *)
 intro.
-intro. inversion H. subst. right. exists t4. rewrite -> (subs (fn n0 t1 (letrec n t1 t2 n0 t4 t4)) n t3). apply e_letrec.
-admit.
+intro. inversion H.
+ subst. right. apply ex_intro with (x:=(subs (fn n0 t1 (letrec n t1 t2 n0 t3 t3)) n t4)). 
+ apply e_letrec.
 Qed.
 
